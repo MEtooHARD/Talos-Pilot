@@ -212,6 +212,22 @@ function openSettingsSession({ immediate = false } = {}) {
           return;
         }
 
+        // Sent via navigator.sendBeacon on the page's 'pagehide' — lets the
+        // server notice the tab actually closed within moments instead of
+        // only via the 15-minute idle timeout below. That gap used to mean
+        // a user who closed the tab after a bad "I'm logged in" click (or
+        // just changed their mind) couldn't reopen Settings from the tray
+        // for up to 15 minutes — the click wasn't hanging, it was correctly
+        // no-op'ing against a session that, as far as the server knew, was
+        // still open. sendBeacon requests have no body worth reading and
+        // don't wait for a response, so this just needs to not error.
+        if (req.method === 'POST' && url.pathname === '/api/close') {
+          res.writeHead(204);
+          res.end();
+          finish();
+          return;
+        }
+
         res.writeHead(404);
         res.end();
       } catch (err) {

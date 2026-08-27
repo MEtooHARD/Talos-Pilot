@@ -123,6 +123,23 @@ const STRINGS = {
   session_ended: {{json webui.status_session_ended}},
 };
 
+// Tells the server the moment this tab actually closes, so a stale/
+// abandoned session gets released right away instead of only via its
+// 15-minute idle timeout — otherwise reopening Settings from the tray right
+// after closing this tab just silently does nothing for however long is
+// left of that window. sendBeacon (not fetch) because this fires during
+// unload, when a normal request could get cancelled before it's sent.
+//
+// 'pagehide' fires on *any* navigation away, not just an actual tab close —
+// including this same page's own language-switch reload below, which would
+// otherwise report the session closed right as it's about to keep going on
+// the freshly-reloaded page. navigatingWithinSession suppresses the beacon
+// for navigations this script triggers itself.
+let navigatingWithinSession = false;
+window.addEventListener('pagehide', () => {
+  if (!navigatingWithinSession) navigator.sendBeacon('/api/close');
+});
+
 async function api(path, opts) {
   let res;
   try {
@@ -158,12 +175,39 @@ async function startLogin() {
     await api('/api/login/start', { method: 'POST' });
     show('step-waiting');
     setStatus('');
+    armLoginDoneCountdown(3);
   } catch (err) {
     setStatus(err.message, true);
   }
 }
 
+// A brief, unclickable grace period on "I'm logged in" so it can't be
+// reflex-clicked before the browser window (and the actual login) is even
+// up yet — that leaves core.js waiting on a session that was never
+// established, which /api/login/finish's own timeout eventually surfaces
+// as an error, but is better avoided than explained after the fact. Counts
+// down in the button's own label so the disabled state doesn't itself look
+// like something's stuck.
+const loginDoneLabel = document.getElementById('btn-login-done').textContent;
+function armLoginDoneCountdown(seconds) {
+  const btn = document.getElementById('btn-login-done');
+  btn.disabled = true;
+  let remaining = seconds;
+  btn.textContent = `${loginDoneLabel} (${remaining})`;
+  const tick = setInterval(() => {
+    remaining -= 1;
+    if (remaining <= 0) {
+      clearInterval(tick);
+      btn.textContent = loginDoneLabel;
+      btn.disabled = false;
+    } else {
+      btn.textContent = `${loginDoneLabel} (${remaining})`;
+    }
+  }, 1000);
+}
+
 document.getElementById('lang-select').onchange = (e) => {
+  navigatingWithinSession = true;
   const url = new URL(location.href);
   url.searchParams.set('lang', e.target.value);
   location.href = url.toString();
