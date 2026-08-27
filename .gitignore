@@ -1,5 +1,8 @@
 node_modules/
 dist/
+# Release zips built from dist/ for uploading to GitHub Releases — these
+# belong there as an attached asset, not tracked in the repo itself.
+*.zip
 
 # Runtime-generated — real login session, schedule state, and logs. The
 # session file in particular is equivalent to a live password; it must
