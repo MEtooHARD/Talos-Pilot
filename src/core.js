@@ -221,19 +221,61 @@ async function attemptSignIn() {
 
     // The page has no real ARIA roles at all (confirmed live: it's a React
     // app with plain divs and delegated click handlers, not semantic
-    // buttons/links) — target today's reward tile by its visible "Day N"
-    // label instead, using the UTC+8 day-of-month (the site's own reset
-    // clock — see the "*Sign-in times are based on UTC+8" note on the page).
-    const todayLabel = `Day ${utc8Now().getUTCDate()}`;
-    const todayTile = page.getByText(new RegExp(`^${todayLabel}$`)).first();
-
-    if (await todayTile.count()) {
-      await todayTile.click();
-      await sleep(2000);
-      return { status: 'claimed', params: { dayLabel: todayLabel } };
+    // buttons/links) — target reward tiles by their visible "Day N" labels.
+    //
+    // These are numbered by *cumulative sign-ins this month*, not calendar
+    // day-of-month — confirmed live against a real account with missed
+    // days: its next-claimable tile was "Day 1" while the actual UTC+8
+    // date was nowhere near the 1st.
+    //
+    // Today's tile carries its own marker: a full-tile-sized <svg>
+    // (a background highlight, not part of the reward icon or checkmark —
+    // both of those are <img>s) inside its immediate container. Confirmed
+    // live by scanning all 31 tiles on a real account against known ground
+    // truth: exactly one had it, and it was the actual current day —
+    // whether already claimed or not, and regardless of any particular
+    // day's reward icon (some render in different colors, but none of
+    // that is svg-based, so it can't false-trigger this).
+    const dayTiles = await page.getByText(/^Day \d+$/).all();
+    let todayTile = null;
+    let todayLabel = null;
+    for (const tile of dayTiles) {
+      const hasMarker = await tile.locator('xpath=..').locator('svg').count();
+      if (hasMarker) {
+        todayTile = tile;
+        todayLabel = (await tile.textContent()).trim();
+        break;
+      }
     }
 
-    return { status: 'selector-not-found', params: { dayLabel: todayLabel } };
+    if (!todayTile) {
+      return { status: 'selector-not-found', params: { dayLabel: `Day ${utc8Now().getUTCDate()}` } };
+    }
+
+    // Whether today's tile is already claimed is a separate question from
+    // finding it — a claimed tile has 2 <img>s (icon + checkmark overlay)
+    // layered inside it, vs. 1 for unclaimed (confirmed live the same way).
+    const tileImgCount = () => todayTile.locator('xpath=..').locator('img').count();
+
+    if ((await tileImgCount()) > 1) {
+      return { status: 'already-signed-in' };
+    }
+
+    await todayTile.click();
+    await sleep(2000);
+
+    // Confirm the click actually registered instead of trusting it blindly
+    // — clicking a tile the backend doesn't accept appears to just
+    // silently do nothing (no error, nothing on the page changes), which
+    // is exactly what produced a false "Claimed Day 27" report live.
+    if ((await tileImgCount()) <= 1) {
+      return {
+        status: 'error',
+        params: { detail: `Clicked ${todayLabel} but it didn't show as claimed afterward.` },
+      };
+    }
+
+    return { status: 'claimed', params: { dayLabel: todayLabel } };
   } catch (err) {
     return { status: 'error', params: { detail: err.message } };
   } finally {

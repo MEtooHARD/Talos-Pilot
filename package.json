@@ -1,6 +1,6 @@
 {
   "name": "talos-autopilot",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "private": true,
   "description": "Talos Autopilot — local automation for the Arknights: Endfield / SKPORT daily sign-in.",
   "license": "MIT",
