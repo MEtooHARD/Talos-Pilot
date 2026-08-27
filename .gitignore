@@ -1,0 +1,21 @@
+node_modules/
+dist/
+
+# Runtime-generated — real login session, schedule state, and logs. The
+# session file in particular is equivalent to a live password; it must
+# never be committed.
+state/
+*.log
+config.json
+launch-hidden.vbs
+
+# Personal video-editing project file, not part of the app.
+intro_vid/
+
+# OS cruft
+Thumbs.db
+.DS_Store
+
+# Scratch files from local testing (this session's own temp-file naming
+# convention — harmless if this pattern is never actually used again).
+.tmp-*

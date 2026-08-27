@@ -1,0 +1,45 @@
+{
+  "name": "talos-autopilot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Talos Autopilot — local automation for the Arknights: Endfield / SKPORT daily sign-in.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/MEtooHARD/Talos-Pilot.git"
+  },
+  "homepage": "https://github.com/MEtooHARD/Talos-Pilot#readme",
+  "bugs": {
+    "url": "https://github.com/MEtooHARD/Talos-Pilot/issues"
+  },
+  "main": "main.js",
+  "bin": "main.js",
+  "scripts": {
+    "login": "node signin.js --login",
+    "signin": "node signin.js",
+    "start": "node main.js",
+    "check-locales": "node locales/validate.js",
+    "package": "pkg .",
+    "postpackage": "node packaging/postbuild.js"
+  },
+  "dependencies": {
+    "node-notifier": "^10.0.1",
+    "playwright-core": "^1.47.0",
+    "systray2": "^2.1.4"
+  },
+  "devDependencies": {
+    "@yao-pkg/pkg": "^6.22.0"
+  },
+  "pkg": {
+    "assets": [
+      "src/webui-page.html",
+      "assets/tray-icon.ico",
+      "assets/tray-icon-warning.ico",
+      "node_modules/systray2/traybin/**/*",
+      "node_modules/node-notifier/vendor/**/*",
+      "node_modules/playwright-core/browsers.json"
+    ],
+    "targets": ["node22-win-x64"],
+    "outputPath": "dist"
+  }
+}

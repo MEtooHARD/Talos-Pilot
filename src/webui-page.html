@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="{{lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{webui.title}}</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --card-border: rgba(0,0,0,0.15);
+    --input-border: rgba(0,0,0,0.3);
+    --hint-fg: rgba(0,0,0,0.6);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141414;
+      --fg: #f2f2f2;
+      --card-border: rgba(255,255,255,0.2);
+      --input-border: rgba(255,255,255,0.35);
+      --hint-fg: rgba(255,255,255,0.65);
+    }
+  }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+    max-width: 480px; margin: 48px auto; padding: 0 20px; line-height: 1.6;
+  }
+  h1 { font-size: 1.35rem; margin-bottom: 1.2rem; }
+  .card { border: 1px solid var(--card-border); border-radius: 12px; padding: 24px; }
+  button {
+    font-size: 1rem; padding: 10px 18px; border-radius: 8px; border: none;
+    background: #f2e133; color: #141414; font-weight: 600; cursor: pointer;
+  }
+  button.secondary { background: transparent; border: 1px solid var(--input-border); color: inherit; font-weight: 400; }
+  button:disabled { opacity: 0.6; cursor: default; }
+  input[type=time], select {
+    font-size: 1rem; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--input-border);
+    background: var(--bg); color: var(--fg);
+  }
+  /* The dropdown's OPEN option list is a native popup that doesn't reliably
+     inherit the page's colors — without this it can render near-white
+     text on a near-white background until hovered. */
+  option { background: var(--bg); color: var(--fg); }
+  label { display: block; margin: 14px 0 6px; font-weight: 600; }
+  .hint { color: var(--hint-fg); font-size: 0.9rem; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .hidden { display: none; }
+  #status { margin-top: 16px; min-height: 1.2em; }
+  #status.error { color: #e05252; }
+  .lang-picker { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+  .lang-picker select { font-size: 0.9rem; padding: 4px 8px; }
+</style>
+</head>
+<body>
+  <div class="lang-picker">
+    <label for="lang-select" style="margin:0; font-weight:400;" class="hint">{{webui.language_label}}</label>&nbsp;
+    <select id="lang-select">{{language_options}}</select>
+  </div>
+  <h1>{{webui.heading}}</h1>
+  <div class="card">
+    <div id="step-login">
+      <p>{{webui.login_intro}}</p>
+      <button id="btn-login">{{webui.login_button}}</button>
+    </div>
+
+    <div id="step-waiting" class="hidden">
+      <p>{{webui.waiting_intro}}</p>
+      <button id="btn-login-done">{{webui.login_done_button}}</button>
+    </div>
+
+    <div id="step-config" class="hidden">
+      <p id="logged-in-note" class="hint"></p>
+
+      <label>{{webui.mode_label}}</label>
+      <div class="row" style="margin-bottom:6px">
+        <label style="font-weight:400; display:flex; align-items:center; gap:6px; margin:0;">
+          <input type="radio" name="mode" id="mode-window" value="window" checked> {{webui.mode_window_option}}
+        </label>
+        <label style="font-weight:400; display:flex; align-items:center; gap:6px; margin:0;">
+          <input type="radio" name="mode" id="mode-asap" value="asap"> {{webui.mode_asap_option}}
+        </label>
+      </div>
+
+      <div id="window-fields">
+        <label for="start">{{webui.label_earliest}}</label>
+        <input type="time" id="start" value="09:00">
+
+        <label for="end">{{webui.label_latest}}</label>
+        <input type="time" id="end" value="22:00">
+        <p class="hint">{{webui.window_hint}}</p>
+      </div>
+
+      <div id="asap-fields" class="hidden">
+        <label for="asap-time">{{webui.label_asap_time}}</label>
+        <input type="time" id="asap-time" value="04:01">
+        <p class="hint">{{webui.mode_asap_hint}}</p>
+      </div>
+
+      <label><input type="checkbox" id="autostart"> {{webui.autostart_label}}</label>
+
+      <div class="row" style="margin-top:22px">
+        <button id="btn-save">{{webui.save_button}}</button>
+        <button class="secondary" id="btn-relogin">{{webui.relogin_button}}</button>
+      </div>
+    </div>
+
+    <p id="status"></p>
+  </div>
+
+<script>
+const STRINGS = {
+  opening_browser: {{json webui.status_opening_browser}},
+  saving_login: {{json webui.status_saving_login}},
+  invalid_range: {{json webui.status_invalid_range}},
+  no_mode_selected: {{json webui.status_no_mode_selected}},
+  generic_error: {{json webui.status_generic_error}},
+  logged_in_with_config: {{json webui.logged_in_note_with_config}},
+  logged_in_no_config: {{json webui.logged_in_note_no_config}},
+  saved: {{json webui.status_saved}},
+  session_ended: {{json webui.status_session_ended}},
+};
+
+async function api(path, opts) {
+  let res;
+  try {
+    res = await fetch(path, opts);
+  } catch (err) {
+    // fetch() itself throwing (not an HTTP error response) means the
+    // local server is gone — most likely because a previous Save already
+    // closed it. Give a specific, actionable message instead of a raw
+    // browser network error.
+    if (err instanceof TypeError) throw new Error(STRINGS.session_ended);
+    throw err;
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || STRINGS.generic_error);
+  return data;
+}
+
+function show(id) {
+  ['step-login', 'step-waiting', 'step-config'].forEach((x) => {
+    document.getElementById(x).classList.toggle('hidden', x !== id);
+  });
+}
+
+function setStatus(msg, isError) {
+  const el = document.getElementById('status');
+  el.textContent = msg || '';
+  el.classList.toggle('error', !!isError);
+}
+
+async function startLogin() {
+  setStatus(STRINGS.opening_browser);
+  try {
+    await api('/api/login/start', { method: 'POST' });
+    show('step-waiting');
+    setStatus('');
+  } catch (err) {
+    setStatus(err.message, true);
+  }
+}
+
+document.getElementById('lang-select').onchange = (e) => {
+  const url = new URL(location.href);
+  url.searchParams.set('lang', e.target.value);
+  location.href = url.toString();
+};
+
+function updateModeVisibility() {
+  const isAsap = document.getElementById('mode-asap').checked;
+  document.getElementById('window-fields').classList.toggle('hidden', isAsap);
+  document.getElementById('asap-fields').classList.toggle('hidden', !isAsap);
+}
+document.getElementById('mode-window').onchange = updateModeVisibility;
+document.getElementById('mode-asap').onchange = updateModeVisibility;
+
+async function init() {
+  try {
+    const state = await api('/api/state');
+    if (state.loggedIn) {
+      if (state.config) {
+        const mode = state.config.mode || 'window';
+        document.getElementById(mode === 'asap' ? 'mode-asap' : 'mode-window').checked = true;
+        document.getElementById('start').value = state.config.windowStart;
+        document.getElementById('end').value = state.config.windowEnd;
+        document.getElementById('asap-time').value = state.config.asapTimeUtc8 || '04:01';
+        document.getElementById('autostart').checked = !!state.config.autostart;
+        document.getElementById('logged-in-note').textContent = STRINGS.logged_in_with_config;
+      } else {
+        document.getElementById('mode-window').checked = true;
+        document.getElementById('logged-in-note').textContent = STRINGS.logged_in_no_config;
+      }
+      updateModeVisibility();
+      show('step-config');
+    } else {
+      show('step-login');
+    }
+  } catch (err) {
+    setStatus(err.message, true);
+  }
+}
+
+document.getElementById('btn-login').onclick = startLogin;
+document.getElementById('btn-relogin').onclick = startLogin;
+
+document.getElementById('btn-login-done').onclick = async () => {
+  const btn = document.getElementById('btn-login-done');
+  btn.disabled = true;
+  setStatus(STRINGS.saving_login);
+  try {
+    await api('/api/login/finish', { method: 'POST' });
+    setStatus('');
+    show('step-config');
+  } catch (err) {
+    setStatus(err.message, true);
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+document.getElementById('btn-save').onclick = async () => {
+  const checkedMode = document.querySelector('input[name="mode"]:checked');
+  if (!checkedMode) {
+    // Shouldn't happen — the window radio ships checked by default in the
+    // HTML itself specifically so this can't depend on init() having run
+    // yet — but this is the one line standing between that assumption ever
+    // being wrong and a click that does nothing with no visible feedback.
+    setStatus(STRINGS.no_mode_selected, true);
+    return;
+  }
+  const mode = checkedMode.value;
+  const windowStart = document.getElementById('start').value;
+  const windowEnd = document.getElementById('end').value;
+  const asapTimeUtc8 = document.getElementById('asap-time').value;
+  const autostart = document.getElementById('autostart').checked;
+  const language = document.getElementById('lang-select').value;
+  if (mode === 'window' && (!windowStart || !windowEnd || windowStart >= windowEnd)) {
+    setStatus(STRINGS.invalid_range, true);
+    return;
+  }
+  if (mode === 'asap' && !asapTimeUtc8) {
+    setStatus(STRINGS.invalid_range, true);
+    return;
+  }
+  try {
+    await api('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode, windowStart, windowEnd, asapTimeUtc8, autostart, language }),
+    });
+    await api('/api/done', { method: 'POST' });
+    setStatus(STRINGS.saved);
+    // The server is gone at this point — nothing left in this row can
+    // actually do anything, so disable it rather than leave a dead click
+    // around (the TypeError catch in api() above still covers this as a
+    // safety net, but preventing it is better than explaining it).
+    document.getElementById('btn-save').disabled = true;
+    document.getElementById('btn-relogin').disabled = true;
+    document.getElementById('lang-select').disabled = true;
+  } catch (err) {
+    setStatus(err.message, true);
+  }
+};
+
+init();
+</script>
+</body>
+</html>
