@@ -55,6 +55,13 @@ Community contributions for existing languages or the others are very welcome (s
 - **Login expired** — reopen Settings and log in again the same way as first-run setup.
 - Check the log (tray icon → **Open log**) for full detail on every attempt.
 
+## Updating or uninstalling
+
+There's no installer — it's just two files sitting in a folder — so both are plain file operations:
+
+- **Updating**: quit the app first (tray icon → **Quit** — Windows won't let you overwrite a running `.exe`), then download the new zip and copy both files over the old ones in the same folder. Your settings and login carry over untouched.
+- **Uninstalling**: quit the app, then either turn off **start automatically with Windows** in Settings first or just delete `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\Talos Autopilot.lnk` yourself, then delete the folder. That folder — the two exes, `config.json`, `state/`, and the log file — is the entire footprint; nothing else gets touched anywhere on your system.
+
 ## Building from source
 
 Only needed if you want to modify the app yourself — most people should
