@@ -33,6 +33,7 @@ The app opens a small settings page in your normal browser:
 2. Choose **when** it should try each day — a random time in a window you pick, or as soon as your PC turns on after the daily reset.
 3. Optionally turn on **start automatically with Windows**, so you never have to open it again.
 4. Click **Save**. Look for a ![checkmark icon](assets/tray-icon.ico) in your system tray (you may need to click the "^" arrow to show hidden icons) — that's it running.
+5. Double-check: Task Manager → Startup apps → Talos Autopilot should say "Enabled." If not, right-click → Enable.
 
 You can reopen these settings any time from the ![tray icon](assets/tray-icon.ico)'s **Settings** item — to change the schedule, turn autostart on/off, switch language, or **Re-login**.
 
