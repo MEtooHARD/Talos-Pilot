@@ -34,7 +34,7 @@ The app opens a small settings page in your normal browser:
 3. Optionally turn on **start automatically with Windows**, so you never have to open it again.
 4. Click **Save**. Look for a ![checkmark icon](assets/tray-icon.ico) in your system tray (you may need to click the "^" arrow to show hidden icons) — that's it running.
 
-You can reopen these settings any time from the ![tray icon](assets/tray-icon.ico)'s **Settings** item — to change the schedule, turn autostart on/off, switch language, or log in with a different account.
+You can reopen these settings any time from the ![tray icon](assets/tray-icon.ico)'s **Settings** item — to change the schedule, turn autostart on/off, switch language, or **Re-login**.
 
 ## Please read before using this
 

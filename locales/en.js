@@ -83,7 +83,7 @@ module.exports = {
     autostart_label: 'Start automatically with Windows',
     language_label: 'Language',
     save_button: 'Save',
-    relogin_button: 'Log in with a different account',
+    relogin_button: 'Re-login',
     status_opening_browser: 'Opening a browser window...',
     status_saving_login: 'Saving your login...',
     status_invalid_range: 'Please pick a valid range (earliest time before latest time).',

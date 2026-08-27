@@ -78,7 +78,7 @@ module.exports = {
     autostart_label: '隨 Windows 自動啟動',
     language_label: '語言',
     save_button: '儲存',
-    relogin_button: '使用其他帳號登入',
+    relogin_button: '重新登入',
     status_opening_browser: '正在開啟瀏覽器視窗...',
     status_saving_login: '正在儲存登入資訊...',
     status_invalid_range: '請選擇有效的時間範圍（最早時間需早於最晚時間）。',
