@@ -207,6 +207,18 @@ async function attemptSignIn() {
     // Small human-ish pause before interacting with the page.
     await sleep(1000 + Math.random() * 2000);
 
+    // The calendar only renders a trailing window of already-claimed days
+    // by default — confirmed live that e.g. "Day 1" doesn't exist in the
+    // DOM at all until this is expanded, not just hidden via CSS. For an
+    // account with little/no history this month, today's own tile can fall
+    // outside that default window entirely. ensureEnglishUI() already ran
+    // above, so this is always in English by the time we get here.
+    const expandRewards = page.getByText('Show All Rewards', { exact: false }).first();
+    if (await expandRewards.isVisible().catch(() => false)) {
+      await expandRewards.click();
+      await sleep(500);
+    }
+
     // The page has no real ARIA roles at all (confirmed live: it's a React
     // app with plain divs and delegated click handlers, not semantic
     // buttons/links) — target today's reward tile by its visible "Day N"
