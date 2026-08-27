@@ -57,6 +57,36 @@ function utc8DateString() {
   return `${y}-${m}-${day}`;
 }
 
+// Every label the site's own language switcher can show (confirmed live from
+// its dropdown). attemptSignIn() below text-matches English strings like
+// "Day N" and "Log in" — those only appear when the site is actually
+// displaying English, which depends on the visiting browser/account's saved
+// preference, not anything we control. Forcing English here first is what
+// keeps those matches working regardless of what a real user last picked
+// (e.g. the site shows "第27天" instead of "Day 27" in Chinese).
+const SITE_LANGUAGE_NAMES = [
+  '简体中文', '繁體中文', 'Deutsch', 'English', 'Español', 'Français',
+  'Indonesia', 'Italiano', '日本語', '한국어', 'Português', 'Русский',
+  'ภาษาไทย', 'Tiếng Việt',
+];
+
+async function ensureEnglishUI(page) {
+  try {
+    const switcher = page
+      .getByText(new RegExp(`^(${SITE_LANGUAGE_NAMES.join('|')})$`))
+      .first();
+    const current = await switcher.textContent({ timeout: 3000 }).catch(() => null);
+    if (!current || current.trim() === 'English') return;
+    await switcher.click();
+    await page.getByText('English', { exact: true }).click({ timeout: 3000 });
+    await sleep(500);
+  } catch {
+    // Best-effort — if the switcher isn't where we expect, fall through and
+    // let the (English-only) text matches below fail with their normal,
+    // already-handled 'selector-not-found' outcome rather than throwing.
+  }
+}
+
 // Prefer the user's real, already-installed browser — no bundled Chromium
 // download, and it looks like a normal browsing session rather than a
 // fingerprint-able automation-only binary. Try Chrome first (most common
@@ -162,6 +192,8 @@ async function attemptSignIn() {
     // Give the account SDK a moment to resolve login state and fire its
     // status calls.
     await sleep(2000 + Math.random() * 3000);
+
+    await ensureEnglishUI(page);
 
     const loginPrompt = page.getByText(/log ?in/i).first();
     if (await loginPrompt.isVisible().catch(() => false)) {
