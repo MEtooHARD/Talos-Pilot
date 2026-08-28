@@ -60,7 +60,9 @@ Community contributions for existing languages or the others are very welcome (s
 There's no installer — it's just two files sitting in a folder — so both are plain file operations:
 
 - **Updating**: quit the app first (tray icon → **Quit** — Windows won't let you overwrite a running `.exe`), then download the new zip and copy both files over the old ones in the same folder. Your settings and login carry over untouched.
-- **Uninstalling**: quit the app, then either turn off **start automatically with Windows** in Settings first or just delete `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\Talos Autopilot.lnk` yourself, then delete the folder. That folder — the two exes, `config.json`, `state/`, and the log file — is the entire footprint; nothing else gets touched anywhere on your system.
+- **Uninstalling**: quit the app, then either turn off **start automatically with Windows** in Settings first or just delete `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\Talos Autopilot.lnk` yourself, then delete the folder. Also delete `%LOCALAPPDATA%\TalosAutopilot\` — the first time it ever shows you a notification, the app copies out a small helper it needs for that (`snoretoast-x64.exe`, part of the open-source `node-notifier` package) to that folder, since Windows notifications have to run as their own real program rather than living inside the app's own `.exe`. It's not malware or a separate install — just a fully offline, one-time file copy — but it's worth knowing it's there before you assume the app folder is the only thing to remove.
+
+  Between the app folder and that one, that's the entire footprint; nothing else gets touched anywhere on your system.
 
 ## Building from source
 
