@@ -86,11 +86,18 @@ function freshStateForToday(today, cfg) {
 }
 
 /**
- * `alwaysNotify` is for a manually-triggered "Claim now": unlike the
- * background scheduler (which only notifies on failure, staying quiet on
- * the common/expected success case), a deliberate manual click gets a
- * notification for whatever happened — success, already-claimed, or
- * failure alike — since the user is actively waiting on the outcome.
+ * `alwaysNotify` is for a manually-triggered "Claim now": both it and the
+ * background scheduler notify for every outcome alike (an actual claim
+ * succeeding or failing, or a real problem like an expired session) — with
+ * one quiet exception. core.js can determine "already claimed" purely by
+ * checking (the attendance API response, or the tile's own img count) —
+ * without ever clicking anything — and when the regular background check
+ * turns up that result, nothing was actually attempted, so there's nothing
+ * new to report; the tray's own status line already reflects it. A manual
+ * click is exempt from that quiet case: it always gets its own answer,
+ * since the user is asking, right now, what just happened — "you're
+ * already signed in" is still a real reply to that, even though nothing
+ * needed doing.
  */
 async function runAttempt(state, { alwaysNotify = false } = {}) {
   const result = await core.attemptSignIn();
@@ -107,15 +114,10 @@ async function runAttempt(state, { alwaysNotify = false } = {}) {
     state.scheduledAt = new Date(Date.now() + RETRY_DELAY_MS).toISOString();
   }
 
-  if (alwaysNotify) {
-    notify.manualResult(result);
-    // A manual click already told the user about this exact failure —
-    // don't also fire the background scheduler's own failure notification
-    // for the same still-unresolved problem the next time it retries today.
+  const staysQuiet = result.status === 'already-signed-in' && !alwaysNotify;
+  if (!staysQuiet && (alwaysNotify || !state.notifiedForDate)) {
+    notify.send(result);
     if (!succeeded) state.notifiedForDate = true;
-  } else if (!succeeded && !state.notifiedForDate) {
-    notify.failure(result);
-    state.notifiedForDate = true;
   }
 
   saveState(state);

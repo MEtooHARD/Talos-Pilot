@@ -48,12 +48,10 @@ function send(result, callback) {
 }
 
 module.exports = {
-  // The background scheduler's own name for this — only ever called for a
-  // genuine problem, since it deliberately stays quiet on the common,
-  // expected "it just worked" case.
-  failure: send,
-  // A manually-triggered "Claim now" gets a notification for whatever
-  // actually happened — success, already-claimed, or failure alike — since
-  // the user is actively waiting to know the outcome, not just the bad news.
-  manualResult: send,
+  // Every notification this app ever sends — a claim attempt's result
+  // (success, already-claimed, or failure alike, whether triggered
+  // automatically or by a manual "Claim now" click) or an app crash — goes
+  // through this one function. Which attempts actually get notified is
+  // scheduler.js's call, not this module's.
+  send,
 };

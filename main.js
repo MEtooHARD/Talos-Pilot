@@ -61,11 +61,11 @@ process.on('exit', (code) => {
 });
 process.on('uncaughtException', (err) => {
   log(`Uncaught exception — the app is about to crash: ${err.stack || err}`);
-  // notify.failure() spawns its toast helper asynchronously — exiting
+  // notify.send() spawns its toast helper asynchronously — exiting
   // immediately after calling it risks killing the process before the
   // notification actually gets sent. Wait for it (with a safety-net
   // timeout in case something's wrong with the notifier itself).
-  notify.failure({ status: 'crashed', message: i18n.t('main.crashed_message') }, () => process.exit(1));
+  notify.send({ status: 'crashed', message: i18n.t('main.crashed_message') }, () => process.exit(1));
   setTimeout(() => process.exit(1), 3000);
 });
 
