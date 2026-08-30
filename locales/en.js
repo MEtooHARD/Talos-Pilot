@@ -8,6 +8,7 @@ module.exports = {
   meta: { name: 'English' },
 
   tray: {
+    menu_title: 'Talos Autopilot v{version}',
     menu_settings: 'Settings',
     menu_run_now: 'Claim now',
     menu_open_log: 'Open log',

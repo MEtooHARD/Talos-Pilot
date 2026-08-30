@@ -8,6 +8,11 @@ const i18n = require('./i18n');
 const packaged = require('./packaged');
 const { log, LOG_FILE } = require('./logger');
 
+// A literal-string require so pkg's static analysis picks it up and bundles
+// package.json into the snapshot automatically, same as any other file this
+// code actually needs at runtime — no separate "assets" entry required.
+const APP_VERSION = require('../package.json').version;
+
 const ICON_PATH = path.join(__dirname, '..', 'assets', 'tray-icon.ico');
 // Shown instead of the normal icon whenever needsAttention() below is true
 // — setup incomplete, expired login, or a claim attempt that didn't go
@@ -51,6 +56,18 @@ function needsAttention(state) {
  */
 function startTray({ onQuit } = {}) {
   const menuItem = (title, click) => ({ title, tooltip: '', checked: false, enabled: true, click });
+
+  // A dedicated, non-clickable header row so the running build's version is
+  // always one glance away — useful for confirming an update actually took
+  // (the exe has no visible version of its own) or for a bug report to
+  // mention which build it's about. Static for the process's lifetime, so
+  // unlike statusItem it's never touched again after construction.
+  const titleItem = {
+    title: i18n.t('tray.menu_title', { version: APP_VERSION }),
+    tooltip: '',
+    checked: false,
+    enabled: false,
+  };
 
   // A dedicated, non-clickable item for the live status line. Updated via
   // 'update-item' (the exact pattern the library's own README uses for
@@ -98,7 +115,7 @@ function startTray({ onQuit } = {}) {
     if (onQuit) onQuit();
   });
 
-  const menuItems = () => [settingsItem, SysTray.separator, statusItem, runNowItem, openLogItem, SysTray.separator, quitItem];
+  const menuItems = () => [titleItem, SysTray.separator, settingsItem, SysTray.separator, statusItem, runNowItem, openLogItem, SysTray.separator, quitItem];
 
   const systray = new SysTray({
     menu: {
@@ -150,11 +167,12 @@ function startTray({ onQuit } = {}) {
   }
 
   function refreshMenuLabels() {
+    titleItem.title = i18n.t('tray.menu_title', { version: APP_VERSION });
     settingsItem.title = i18n.t('tray.menu_settings');
     runNowItem.title = i18n.t('tray.menu_run_now');
     openLogItem.title = i18n.t('tray.menu_open_log');
     quitItem.title = i18n.t('tray.menu_quit');
-    for (const item of [settingsItem, runNowItem, openLogItem, quitItem]) {
+    for (const item of [titleItem, settingsItem, runNowItem, openLogItem, quitItem]) {
       systray.sendAction({ type: 'update-item', item });
     }
   }

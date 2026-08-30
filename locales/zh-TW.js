@@ -7,6 +7,7 @@ module.exports = {
   meta: { name: '繁體中文' },
 
   tray: {
+    menu_title: 'Talos Autopilot v{version}',
     menu_settings: '設定',
     menu_run_now: '立即簽到',
     menu_open_log: '開啟紀錄',
