@@ -195,9 +195,21 @@ async function attemptSignIn() {
 
     await ensureEnglishUI(page);
 
-    const loginPrompt = page.getByText(/log ?in/i).first();
-    if (await loginPrompt.isVisible().catch(() => false)) {
-      return { status: 'session-expired' };
+    // The real /attendance response is the authoritative signal for "am I
+    // actually logged in" — if it came back at all, the session is valid,
+    // full stop, regardless of what unrelated text happens to be on the
+    // page elsewhere. Confirmed live 2026-09-01: a site news/patch-notes
+    // banner whose own body text happened to contain "log in" made this
+    // broad DOM scan false-positive as an expired session on an account
+    // that was fully, freshly logged in — attendanceInfo had already come
+    // back fine (hasToday: false, real calendar data) by the time the scan
+    // ran. Only fall back to scanning the page for a login prompt when we
+    // genuinely never got attendance data back at all.
+    if (!attendanceInfo) {
+      const loginPrompt = page.getByText(/log ?in/i).first();
+      if (await loginPrompt.isVisible().catch(() => false)) {
+        return { status: 'session-expired' };
+      }
     }
 
     if (attendanceInfo && attendanceInfo.hasToday) {
